@@ -5,6 +5,41 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import streamlit as st
 
+def check_login():
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+    if "username" not in st.session_state:
+        st.session_state.username = ""
+
+    if st.session_state.logged_in:
+        return True
+
+    st.title("Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        users = st.secrets["users"]
+        if username in users and password == users[username]:
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.rerun()
+        else:
+            st.error("Invalid username or password")
+
+    return False
+
+if not check_login():
+    st.stop()
+
+with st.sidebar:
+    st.write(f"Logged in as: {st.session_state.username}")
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.rerun()
+
 st.set_page_config(page_title="Stock Tracker", page_icon="📈", layout="wide")
 
 def compute_rsi(close: pd.Series, window: int = 14) -> pd.Series:
