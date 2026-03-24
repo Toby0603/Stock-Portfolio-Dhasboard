@@ -42,7 +42,7 @@ def build_features(data: pd.DataFrame) -> pd.DataFrame:
     df["Return_Lag2"] = df["Return_1d"].shift(2)
     df["Return_Lag3"] = df["Return_1d"].shift(3)
     future_return_5d = df["Close"].shift(-5) / df["Close"] -1
-    df["Target"] = (future_return_5d > 0.02).astype(int)
+    df["Target"] = (future_return_5d > 0.01).astype(int)
     return df
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -97,7 +97,7 @@ def process_ticker(ticker: str):
         return None
 
     best_model = XGBClassifier(
-        n_estimators=250,
+        n_estimators=100,
         max_depth=4,
         learning_rate=0.05,
         subsample=0.8,
