@@ -5,6 +5,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import streamlit as st
 
+st.set_page_config(page_title="Stock Tracker", page_icon="📈", layout="wide")
+
 def check_login():
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
@@ -40,7 +42,7 @@ with st.sidebar:
         st.session_state.username = ""
         st.rerun()
 
-st.set_page_config(page_title="Stock Tracker", page_icon="📈", layout="wide")
+
 
 def compute_rsi(close: pd.Series, window: int = 14) -> pd.Series:
     close = pd.to_numeric(close, errors="coerce")
