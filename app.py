@@ -10,8 +10,12 @@ st.set_page_config(page_title="Stock Tracker", page_icon="📈", layout="wide")
 
 def check_login():
     if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
+    st.session_state.logged_in = False
 
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+def check_login():
     if st.session_state.logged_in:
         return True
 
@@ -26,6 +30,7 @@ def check_login():
 
         if username == app_username and password == app_password:
             st.session_state.logged_in = True
+            st.session_state.username = username
             st.rerun()
         else:
             st.error("Invalid username or password")
