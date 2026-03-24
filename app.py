@@ -79,6 +79,7 @@ def process_ticker(ticker: str):
 
     for col in feature_cols:
         data[col] = pd.to_numeric(data[col], errors="coerce")
+
     data["Target"] = pd.to_numeric(data["Target"], errors="coerce")
 
     model_data = data.dropna(subset=feature_cols + ["Target"]).copy()
@@ -104,13 +105,11 @@ def process_ticker(ticker: str):
         min_child_weight=3,
         reg_alpha=0.1,
         reg_lambda=1.0,
-        random_state = 42,
+        random_state=42,
         eval_metric="logloss",
         n_jobs=-1,
     )
-
-  
-    best_model = (X_train, y_train)
+    best_model.fit(X_train, y_train)
 
     test_preds = best_model.predict(X_test)
     accuracy_pct = accuracy_score(y_test, test_preds) * 100
@@ -121,7 +120,6 @@ def process_ticker(ticker: str):
     latest_features = X.tail(1)
     latest_price = float(model_data["Close"].iloc[-1])
     prob_up = float(best_model.predict_proba(latest_features)[0][1]) * 100
-    
 
     latest_return_1d = float(model_data["Return_1d"].iloc[-1])
     latest_volatility_30 = float(model_data["Volatility_30"].iloc[-1])
@@ -146,7 +144,6 @@ def process_ticker(ticker: str):
         "F1 Score (%)": f1_pct,
         "RSI_14": latest_rsi,
         "Top Features": top_features,
-        "Best Params": str(grid.best_params_),
     }
 
 def score_row(row: pd.Series):
