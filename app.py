@@ -3,16 +3,15 @@ import yfinance as yf
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import streamlit as st
+import streamlit as st 
+import os
 
 st.set_page_config(page_title="Stock Tracker", page_icon="📈", layout="wide")
 
 def check_login():
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
-    if "username" not in st.session_state:
-        st.session_state.username = ""
-
+   
     if st.session_state.logged_in:
         return True
 
@@ -22,10 +21,11 @@ def check_login():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        users = st.secrets["users"]
-        if username in users and password == users[username]:
+        if(
+            username == os.environ.get("APP_USERNAME")
+            and password == os.environ.get("APP_PASSWORD")
+        ):
             st.session_state.logged_in = True
-            st.session_state.username = username
             st.rerun()
         else:
             st.error("Invalid username or password")
