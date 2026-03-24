@@ -41,7 +41,8 @@ def build_features(data: pd.DataFrame) -> pd.DataFrame:
     df["Return_Lag1"] = df["Return_1d"].shift(1)
     df["Return_Lag2"] = df["Return_1d"].shift(2)
     df["Return_Lag3"] = df["Return_1d"].shift(3)
-    df["Target"] = (df["Close"].shift(-5) > df["Close"]).astype(int)
+    future_return_5d = df["Close"].shift(-5) / df["Close"] -1
+    df["Target"] = (future_return_5d > 0.02).astype(int)
     return df
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -94,18 +95,22 @@ def process_ticker(ticker: str):
     if len(X_train) < 100 or len(X_test) < 20:
         return None
 
-    param_grid = {
-        "n_estimators": [100],
-        "max_depth": [3],
-        "learning_rate": [0.05],
-        "subsample": [0.8],
-        "colsample_bytree": [0.8],
-    }
+    best_model = XGBClassifier(
+        n_estimators=250,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        min_child_weight=3,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
+        random_state = 42,
+        eval_metric="logloss",
+        n_jobs=-1,
+    )
 
-    model = XGBClassifier(random_state=42, eval_metric="logloss", n_jobs=-1)
-    grid = GridSearchCV(model, param_grid=param_grid, cv=3, scoring="accuracy", n_jobs=-1)
-    grid.fit(X_train, y_train)
-    best_model = grid.best_estimator_
+  
+    best_model = (X_train, y_train)
 
     test_preds = best_model.predict(X_test)
     accuracy_pct = accuracy_score(y_test, test_preds) * 100
@@ -116,8 +121,7 @@ def process_ticker(ticker: str):
     latest_features = X.tail(1)
     latest_price = float(model_data["Close"].iloc[-1])
     prob_up = float(best_model.predict_proba(latest_features)[0][1]) * 100
-    predicted_class = int(best_model.predict(latest_features)[0])
-    predicted_direction = "BUY" if predicted_class == 1 else "SELL"
+    
 
     latest_return_1d = float(model_data["Return_1d"].iloc[-1])
     latest_volatility_30 = float(model_data["Volatility_30"].iloc[-1])
@@ -135,7 +139,6 @@ def process_ticker(ticker: str):
         "MA200 ($)": ma200,
         "Daily Return": latest_return_1d,
         "Volatility": latest_volatility_30,
-        "Signal": predicted_direction,
         "Predicted Prob Up (%)": prob_up,
         "Accuracy (%)": accuracy_pct,
         "Precision (%)": precision_pct,
@@ -159,20 +162,20 @@ def score_row(row: pd.Series):
     rsi = row["RSI_14"]
     bonus = 10 if rsi < 30 else 5 if rsi < 40 else -10 if rsi > 70 else -5 if rsi > 60 else 0
     return round(
-        0.35 * row["Predicted Prob Up (%)"]
-        + 0.25 * row["Accuracy (%)"]
-        + 0.20 * row["Precision (%)"]
-        + 0.20 * row["F1 Score (%)"]
+        0.40 * row["Predicted Prob Up (%)"]
+        + 0.20 * row["Accuracy (%)"]
+        + 0.25 * row["Precision (%)"]
+        + 0.15 * row["F1 Score (%)"]
         + bonus,
         1,
     )
 
 st.title("📈 Stock Tracker")
-st.caption("Educational use only. Not financial advice.")
+st.caption("Disclaimer: These are not guarenteed, only modelled best guess predictions")
 
 with st.sidebar:
     st.header("Inputs")
-    default_tickers = "AAPL, MSFT, GOOGL, TSCO.L, SHEL.L"
+    default_tickers = "MSFT, GOOGL, TSCO.L, SHEL.L"
     tickers_text = st.text_area("Tickers (comma-separated)", value=default_tickers, height=140)
     run_clicked = st.button("Run model", type="primary")
     st.markdown("Examples: `AAPL`, `MSFT`, `SHEL.L`, `TSCO.L`")
@@ -208,7 +211,7 @@ if run_clicked:
                 if s >= 60
                 else "Neutral"
                 if s >= 50
-                else "Avoid"
+                else "Avoid / Consider Shorting"
             )
             df = df.sort_values(["Score", "Predicted Prob Up (%)"], ascending=False)
 
@@ -222,7 +225,7 @@ if run_clicked:
             st.dataframe(df, use_container_width=True)
 
             st.subheader("Top ideas")
-            top = df.head(10)[["Ticker", "Signal", "Predicted Prob Up (%)", "Accuracy (%)", "Score", "Rating"]]
+            top = df.head(10)[["Ticker", "Predicted Prob Up (%)", "Accuracy (%)", "Score", "Rating"]]
             st.dataframe(top, use_container_width=True)
 
             csv = df.to_csv(index=False).encode("utf-8")
