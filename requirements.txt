@@ -1,0 +1,5 @@
+pandas
+yfinance
+xgboost
+scikit-learn
+streamlit
